@@ -47,6 +47,10 @@ export async function createMatchService(req) {
         status: initialStatus
     }).returning();
 
+    if (req.app.locals.broadcastMatchCreated) {
+        req.app.locals.broadcastMatchCreated(event);
+    }
+
     return event;
 }
 
