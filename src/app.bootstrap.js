@@ -1,5 +1,5 @@
 import express from 'express'
-import { noteRouter, userRouter } from './Module/index.js';
+import { MatchesRouter } from './Module/index.js';
 import { connectDB } from './db/connection.js';
 import { globalErrorHandler } from './common/utils/index.js';
 
@@ -9,8 +9,7 @@ export const bootstrap = async () => {
     app.use(express.json())
     await connectDB()
 
-    app.use('/user', userRouter)
-    app.use('/note', noteRouter)
+    app.use('/matches', MatchesRouter)
 
     app.use(globalErrorHandler)
 
