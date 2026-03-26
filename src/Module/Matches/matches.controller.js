@@ -16,7 +16,7 @@ MatchesRouter.post('/', asyncHandler(async (req, res, next) => {
     })
 }))
 MatchesRouter.get('/', asyncHandler(async (req, res, next) => {
-    const matchesList = await matchService.getMatchesService(req);
+    const matchesList = await matchService.getMatchesService(req );
     
     return successResponse({ 
         res, 
