@@ -6,7 +6,6 @@ export async function sendJson(socket, payload) {
 }
 
 export async function broadcast(wss, payload) {
-    // Fixed: wss.clients (with 's') and checking client.readyState correctly
     for (const client of wss.clients) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(payload));
@@ -14,18 +13,37 @@ export async function broadcast(wss, payload) {
     }
 }
 
+function heartbeat() {
+    this.isAlive = true;
+}
+
 export function attachWebSocketServer(server) {
-    // Fixed: added 'new' keyword to WebSocketServer
     const wss = new WebSocketServer({
         server,
         path: "/ws",
-        maxPayload: 1024 * 1024,
+        maxPayload: 1024 * 1024 // 1MB max payload for safety and speed
     });
 
     wss.on('connection', (socket) => {
-        // Fixed spelling: welecom -> welcome
+        // Initialize keep-alive
+        socket.isAlive = true;
+        socket.on('pong', heartbeat);
+        
         sendJson(socket, { type: "welcome" });
         socket.on('error', console.error);
+    });
+
+    // Ping every 30 seconds to keep connections alive and ultra-fast
+    const interval = setInterval(() => {
+        wss.clients.forEach((ws) => {
+            if (ws.isAlive === false) return ws.terminate();
+            ws.isAlive = false;
+            ws.ping();
+        });
+    }, 30000);
+
+    wss.on('close', () => {
+        clearInterval(interval);
     });
     
     function broadcastMatchCreated(match) {
