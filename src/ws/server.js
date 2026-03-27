@@ -19,36 +19,48 @@ const heartbeat = function () {
 };
 
 export function attachWebSocketServer(server) {
+  // Use noServer: true because we handle the upgrade manually for security
   const wss = new WebSocketServer({
-    server,
+    noServer: true,
     path: "/ws",
     maxPayload: 1024 * 1024,
   });
 
-  wss.on("connection", async (socket, req) => {
-    // 🔐 Arcjet Protection
-    if (wsArcjet) {
+  // Handle the HTTP upgrade manually
+  server.on("upgrade", async (req, socket, head) => {
+    const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+
+    if (pathname === "/ws") {
       try {
         const decision = await wsArcjet.protect(req);
 
         if (decision.isDenied()) {
-          const isRateLimit = decision.reason?.type === "RATE_LIMIT";
+          const isRateLimit = decision.reason?.isRateLimit();
+          const statusCode = isRateLimit ? 429 : 403;
+          const statusText = isRateLimit ? "Too Many Requests" : "Forbidden";
 
-          const code = isRateLimit ? 1013 : 1008;
-          const reason = isRateLimit
-            ? "Rate limit exceeded"
-            : "Access denied";
-
-          socket.close(code, reason);
+          // Write raw HTTP error before handshake
+          socket.write(`HTTP/1.1 ${statusCode} ${statusText}\r\nConnection: close\r\n\r\n`);
+          socket.destroy();
           return;
         }
-      } catch (error) {
-        console.error("WS Arcjet error:", error);
-        socket.close(1011, "Server security error");
-        return;
-      }
-    }
 
+        // If authorized, proceed with the upgrade
+        wss.handleUpgrade(req, socket, head, (ws) => {
+          wss.emit("connection", ws, req);
+        });
+      } catch (error) {
+        console.error("WS Upgrade Security Error:", error);
+        socket.write("HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\n\r\n");
+        socket.destroy();
+      }
+    } else {
+      // If it's not the /ws path, destroy it or let something else handle it
+      socket.destroy();
+    }
+  });
+
+  wss.on("connection", (socket) => {
     // ❤️ heartbeat
     socket.isAlive = true;
     socket.on("pong", heartbeat);
