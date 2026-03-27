@@ -73,3 +73,5 @@ export async function getMatchesService(req) {
 
     return data;
 }
+
+// wscat -c ws://localhost:3000/ws

@@ -1,3 +1,10 @@
+const errorExecution = ({ message, statusCode, extra }) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    error.extra = extra;
+    return error;
+};
+
 export const globalErrorHandler = (error, req, res, next) => {
     const status = error.cause?.statusCode ?? error.statusCode ?? 500
     return res.status(status).json({

@@ -4,6 +4,7 @@ import { connectDB } from './db/connection.js';
 import { globalErrorHandler } from './common/utils/index.js';
 import http from 'http';
 import { attachWebSocketServer } from './ws/server.js';
+import { securityMiddleware } from './arcject.js';
 
 export const bootstrap = async () => {
     const app = express();
@@ -14,6 +15,8 @@ export const bootstrap = async () => {
     await connectDB();
 
     app.use('/matches', MatchesRouter);
+
+    app.use(securityMiddleware())
 
     app.use(globalErrorHandler);
 
