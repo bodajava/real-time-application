@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, integer, jsonb, pgEnum, index } from 'drizzle-orm/pg-core';
 
 // Create match_status enum
 export const matchStatusEnum = pgEnum('match_status', ['scheduled', 'live', 'finished']);
@@ -15,7 +15,9 @@ export const matches = pgTable('matches', {
   homeScore: integer('home_score').default(0).notNull(),
   awayScore: integer('away_score').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  createdAtIndex: index('created_at_idx').on(table.createdAt),
+}));
 
 // Create commentary table
 export const commentary = pgTable('commentary', {

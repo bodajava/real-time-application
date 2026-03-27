@@ -6,7 +6,7 @@ export const MATCH_STATUS = {
   FINISHED: 'finished',
 };
 
-export const listMatchesQuerySchema = z.object({
+export const  listMatchesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional(),
 });
 
