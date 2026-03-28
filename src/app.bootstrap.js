@@ -5,6 +5,7 @@ import { globalErrorHandler } from './common/utils/index.js';
 import http from 'http';
 import { attachWebSocketServer } from './ws/server.js';
 import { securityMiddleware } from './arcject.js';
+import RouterCommentary from './Module/commentary/comment.controller.js';
 
 export const bootstrap = async () => {
     const app = express();
@@ -13,8 +14,8 @@ export const bootstrap = async () => {
     
     app.use(express.json());
     await connectDB();
-
     app.use('/matches', MatchesRouter);
+    app.use('/matches/:id/commentary', RouterCommentary);
 
     app.use(securityMiddleware())
 
@@ -22,8 +23,10 @@ export const bootstrap = async () => {
 
     const server = http.createServer(app);
 
-    const { broadcastMatchCreated } = attachWebSocketServer(server);
+    const { broadcastMatchCreated , broadcastCommentary } = attachWebSocketServer(server);
     app.locals.broadcastMatchCreated = broadcastMatchCreated;
+    app.locals.broadcastCommentary = broadcastCommentary;
+
 
     app.use((req, res) => {
         return res.status(404).json({ message: "page not found" });
