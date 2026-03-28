@@ -35,9 +35,14 @@ export const bootstrap = async () => {
         return res.status(404).json({ message: "page not found" });
     });
 
-    server.listen(port, host, () => {
-        const baseUrl = host === '0.0.0.0' ? `http://localhost:${port}` : `http://${host}:${port}`;
-        console.log(`server is running on ${baseUrl}`);
-        console.log(`websocket server running on ${baseUrl.replace('http', 'ws')}/ws`);
-    });
+    // Only listen if this file is run directly or not in a serverless environment
+    if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+        server.listen(port, host, () => {
+            const baseUrl = host === '0.0.0.0' ? `http://localhost:${port}` : `http://${host}:${port}`;
+            console.log(`server is running on ${baseUrl}`);
+            console.log(`websocket server running on ${baseUrl.replace('http', 'ws')}/ws`);
+        });
+    }
+
+    return app;
 }
