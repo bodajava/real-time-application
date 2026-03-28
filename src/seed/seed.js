@@ -2,11 +2,9 @@ import "dotenv/config";
 import fs from "fs/promises";
 import { db } from "../db/connection.js";
 import { matches, commentary } from "../db/models/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
-const DELAY_MS = Number.parseInt(process.env.DELAY_MS || "50", 10);
 const DEFAULT_MATCH_DURATION_MINUTES = 120;
-
 const DATA_FILE = new URL("../data/data.json", import.meta.url);
 
 async function readJsonFile(fileUrl) {
@@ -37,19 +35,20 @@ function buildMatchTimes(seedMatch) {
 }
 
 async function seed() {
-    console.log("🌱 Starting Database Seed...");
+    console.log("🌱 Starting Optimized Database Seed...");
+
+    const { feed, matches: seedMatches } = await loadSeedData();
 
     // 1. Clear existing data
-    console.log("🧹 Clearing old data...");
-    await db.delete(commentary);
-    await db.delete(matches);
+    console.log("🧹 Clearing all existing data (Matches & Commentary)...");
+    await db.execute(sql`TRUNCATE TABLE commentary, matches RESTART IDENTITY CASCADE`);
+    console.log("✨ database is clean!");
 
-    // 2. Load data
-    const { feed, matches: seedMatches } = await loadSeedData();
-    const matchMap = new Map(); // seedId -> dbRecord
-
-    // 3. Insert Matches
+    // 2. Insert Matches
     console.log(`🏟️  Inserting ${seedMatches.length} matches...`);
+    const matchMap = new Map();
+    
+    // We do matches one by one to build the matchMap correctly with returning IDs
     for (const sm of seedMatches) {
         const { startTime, endTime } = buildMatchTimes(sm);
         const [inserted] = await db.insert(matches).values({
@@ -63,18 +62,20 @@ async function seed() {
             status: 'live' 
         }).returning();
         
-        if (sm.id) matchMap.set(sm.id, inserted);
-        console.log(`✅ Created Match: ${inserted.homeTeam} vs ${inserted.awayTeam} (ID: ${inserted.id})`);
+        if (sm.id) matchMap.set(sm.id, inserted.id);
+        // console.log(`✅ Created Match: ${inserted.homeTeam} vs ${inserted.awayTeam}`);
     }
 
-    // 4. Insert Commentary
-    console.log(`📣 Inserting ${feed.length} commentary entries...`);
+    // 3. Prepare Commentary for Bulk Insert
+    console.log(`📣 Preparing ${feed.length} commentary entries...`);
+    const commentaryToInsert = [];
+    
     for (const entry of feed) {
-        const targetMatch = matchMap.get(entry.matchId);
-        if (!targetMatch) continue;
+        const dbMatchId = matchMap.get(entry.matchId);
+        if (!dbMatchId) continue;
 
-        await db.insert(commentary).values({
-            matchId: targetMatch.id,
+        commentaryToInsert.push({
+            matchId: dbMatchId,
             minute: entry.minute ?? entry.minutes ?? 0,
             sequence: entry.sequence,
             period: entry.period || "1st Half",
@@ -85,9 +86,17 @@ async function seed() {
             metadata: entry.metadata || {},
             tags: entry.tags || []
         });
+    }
 
-        if (DELAY_MS > 0) {
-            await new Promise(r => setTimeout(r, DELAY_MS));
+    // 4. Bulk Insert Commentary
+    if (commentaryToInsert.length > 0) {
+        console.log(`🚀 Bulk inserting ${commentaryToInsert.length} entries into database...`);
+        // We chunk the inserts to avoid hitting query parameter limits (though 1200 is small)
+        const chunkSize = 200;
+        for (let i = 0; i < commentaryToInsert.length; i += chunkSize) {
+            const chunk = commentaryToInsert.slice(i, i + chunkSize);
+            await db.insert(commentary).values(chunk);
+            console.log(`📦 Processed chunk ${Math.ceil((i + chunkSize) / chunkSize)} / ${Math.ceil(commentaryToInsert.length / chunkSize)}`);
         }
     }
 
