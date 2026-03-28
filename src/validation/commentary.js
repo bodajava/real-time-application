@@ -13,7 +13,7 @@ export const listCommentaryQuerySchema = z.object({
 export const createCommentarySchema = z.object({
   // Although not explicitly requested, matchId is required by the DB schema
   matchId: z.coerce.number().int().positive(),
-  minutes: z.coerce.number().int().nonnegative(),
+  minute: z.coerce.number().int().nonnegative(),
   sequence: z.coerce.number().int().optional(),
   period: z.string().min(1),
   eventType: z.string().min(1),

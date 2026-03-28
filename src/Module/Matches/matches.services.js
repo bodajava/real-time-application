@@ -21,7 +21,7 @@ export async function createMatchService(req) {
     if (!parsed.success) BadRequestError({ message: "invalid payload" });
 
     // ✅ Your exact variables and destructuring
-    const { data: { startTime, endTime, homeScore, awayScor } } = parsed;
+    const { data: { startTime, endTime, homeScore, awayScore } } = parsed;
 
     // Calculate match status inside the same function directly
     let initialStatus = MATCH_STATUS.SCHEDULED;
@@ -43,7 +43,7 @@ export async function createMatchService(req) {
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         homeScore: homeScore ?? 0,
-        awayScore: awayScor ?? 0,
+        awayScore: awayScore ?? 0,
         status: initialStatus
     }).returning();
 

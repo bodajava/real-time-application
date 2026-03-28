@@ -11,7 +11,7 @@ export async function createCommentaryService(data) {
     .values({
       ...data,
       matchId: data.matchId,
-      minute: data.minutes, 
+      minute: data.minute, 
     })
     .returning();
 
