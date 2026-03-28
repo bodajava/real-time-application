@@ -1,3 +1,6 @@
+import AgentAPI from 'apminsight'
+AgentAPI.config();
+
 import express from 'express'
 import { MatchesRouter } from './Module/index.js';
 import { connectDB } from './db/connection.js';
