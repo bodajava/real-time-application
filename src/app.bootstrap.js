@@ -20,7 +20,11 @@ export const bootstrap = async () => {
     const host = process.env.HOST || '0.0.0.0';
     
     app.use(express.json());
-    await connectDB();
+    try {
+        await connectDB();
+    } catch (dbError) {
+        console.error("⚠️ Database connection failed during bootstrap:", dbError.message);
+    }
     app.use('/matches', MatchesRouter);
     app.use('/matches/:id/commentary', RouterCommentary);
 
@@ -30,9 +34,15 @@ export const bootstrap = async () => {
 
     const server = http.createServer(app);
 
-    const { broadcastMatchCreated , broadcastCommentary } = attachWebSocketServer(server);
-    app.locals.broadcastMatchCreated = broadcastMatchCreated;
-    app.locals.broadcastCommentary = broadcastCommentary;
+    if (process.env.VERCEL) {
+        // Skip WebSockets on Vercel as it's not supported and can cause hangs
+        app.locals.broadcastMatchCreated = () => {};
+        app.locals.broadcastCommentary = () => {};
+    } else {
+        const { broadcastMatchCreated , broadcastCommentary } = attachWebSocketServer(server);
+        app.locals.broadcastMatchCreated = broadcastMatchCreated;
+        app.locals.broadcastCommentary = broadcastCommentary;
+    }
 
 
     app.use((req, res) => {
