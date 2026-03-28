@@ -7,12 +7,14 @@ dotenv.config({ path: path.resolve('config', '.env') });
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not defined in config/.env');
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl && (process.env.NODE_ENV !== 'production' || !process.env.VERCEL)) {
+  console.warn('⚠️ WARNING: DATABASE_URL is not defined in config/.env');
 }
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
 });
 
 export const db = drizzle(pool);

@@ -1,5 +1,9 @@
 import AgentAPI from 'apminsight'
-AgentAPI.config();
+try {
+    AgentAPI.config();
+} catch (e) {
+    console.warn("⚠️ APM Insight failed to initialize:", e.message);
+}
 
 import express from 'express'
 import { MatchesRouter } from './Module/index.js';
